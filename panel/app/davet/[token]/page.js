@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { errorText } from '@/lib/format';
+import { loadMemberships } from '@/lib/memberships';
 
 export default function InvitePage() {
   const { token } = useParams();
@@ -18,6 +19,7 @@ export default function InvitePage() {
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [busy, setBusy] = useState(false);
+  const [mem, setMem] = useState(null); // giriş yapan hesabın üyelikleri
 
   const load = useCallback(async () => {
     const [{ data: inv, error: invError }, { data: s }] = await Promise.all([
@@ -34,6 +36,14 @@ export default function InvitePage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (!session) {
+      setMem(null);
+      return;
+    }
+    loadMemberships(session.user.id).then(setMem);
+  }, [session]);
 
   async function onAuth(e) {
     e.preventDefault();
@@ -88,6 +98,10 @@ export default function InvitePage() {
   if (!invite || session === undefined) return <div className="center">Yükleniyor…</div>;
 
   const isMarket = invite.kind === 'market';
+  const isDistributorAccount = !!(mem && mem.distributor);
+  const existingMarket = mem && mem.retailer && !mem.distributor ? mem.retailer : null;
+  const alreadyMember = !isMarket && mem && [mem.distributor, mem.retailer].some((o) => o && invite.org_name && o.name === invite.org_name);
+  const blocked = isMarket && isDistributorAccount;
 
   return (
     <div className="login-wrap">
@@ -128,12 +142,26 @@ export default function InvitePage() {
         ) : (
           <form onSubmit={onAccept} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <p className="muted small" style={{ margin: 0 }}>Giriş yapan hesap: <span className="strong">{session.user.email}</span></p>
-            {isMarket ? (
+            {blocked ? (
+              <div className="notice error" role="alert">
+                Bu hesap <strong>{mem.distributor.name}</strong> distribütör hesabı; market olarak katılamaz. Aşağıdaki düğmeyle çıkış yapıp market için başka bir e-posta ile devam edin.
+              </div>
+            ) : null}
+            {!isMarket && alreadyMember ? (
+              <div className="notice ok" role="status">Bu hesap zaten {invite.org_name} ekibinde. Davet gerekmiyor.</div>
+            ) : null}
+            {isMarket && !blocked ? (
               <>
-                <div className="field">
-                  <label htmlFor="mname">Market adı</label>
-                  <input id="mname" className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="ör. Yıldız Market" required />
-                </div>
+                {existingMarket ? (
+                  <div className="notice ok" role="status">
+                    Mevcut marketiniz <strong>{existingMarket.name}</strong>, {invite.org_name} ile bağlanacak.
+                  </div>
+                ) : (
+                  <div className="field">
+                    <label htmlFor="mname">Market adı</label>
+                    <input id="mname" className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="ör. Yıldız Market" required />
+                  </div>
+                )}
                 <label className="switch-row">
                   <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
                   <span className="small">
@@ -143,10 +171,12 @@ export default function InvitePage() {
               </>
             ) : null}
             {error ? <div className="notice error" role="alert">{error}</div> : null}
-            <button className="btn primary" type="submit" disabled={busy || (isMarket && (!consent || !name.trim()))}>
+            <button className="btn primary" type="submit" disabled={busy || !mem || blocked || (isMarket && (!consent || (!existingMarket && !name.trim())))}>
               {busy ? 'Bağlanıyor…' : isMarket ? 'Daveti kabul et' : 'Ekibe katıl'}
             </button>
-            <button type="button" className="link" onClick={switchAccount}>Başka bir hesapla devam et</button>
+            <button type="button" className={blocked ? 'btn' : 'link'} onClick={switchAccount}>
+              {blocked ? 'Çıkış yap, başka e-posta ile devam et' : 'Başka bir hesapla devam et'}
+            </button>
           </form>
         )}
       </div>
