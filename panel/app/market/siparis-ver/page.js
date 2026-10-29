@@ -18,6 +18,30 @@ export default function PlaceOrderPage() {
   const [note, setNote] = useState('');
   const [message, setMessage] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [campaign, setCampaign] = useState(null);
+  const [campaignId, setCampaignId] = useState(null);
+
+  useEffect(() => {
+    try {
+      const id = new URLSearchParams(window.location.search).get('kampanya');
+      if (id) setCampaignId(id);
+    } catch (e) {}
+  }, []);
+
+  useEffect(() => {
+    if (!campaignId) return;
+    supabase
+      .from('campaigns')
+      .select('id, kind, distributor_id, product_id, title, case_price, rule, ends_at, campaign_items(product_id, cases, case_price)')
+      .eq('id', campaignId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setCampaign(data);
+          setDistributorId(data.distributor_id);
+        }
+      });
+  }, [campaignId]);
 
   useEffect(() => {
     async function loadDistributors() {
@@ -50,8 +74,13 @@ export default function PlaceOrderPage() {
       return Number(a.days_left ?? 999) - Number(b.days_left ?? 999);
     });
     setRows(list);
-    setQty({});
-  }, [org.id, distributorId]);
+    const pre = {};
+    if (campaign && campaign.distributor_id === distributorId) {
+      if (campaign.kind === 'bundle') for (const it of campaign.campaign_items || []) pre[it.product_id] = it.cases;
+      else if (campaign.product_id) pre[campaign.product_id] = Number((campaign.rule && campaign.rule.min_cases) || 1);
+    }
+    setQty(pre);
+  }, [org.id, distributorId, campaign]);
 
   useEffect(() => {
     loadCatalog();
@@ -64,16 +93,25 @@ export default function PlaceOrderPage() {
     return rows.filter((r) => r.product_name.toLocaleLowerCase('tr-TR').includes(q) || r.gtin.includes(q));
   }, [rows, search]);
 
+  const campPrice = useMemo(() => {
+    const m = new Map();
+    if (campaign && campaign.distributor_id === distributorId) {
+      if (campaign.kind === 'bundle') for (const it of campaign.campaign_items || []) m.set(it.product_id, Number(it.case_price));
+      else if (campaign.product_id && campaign.case_price) m.set(campaign.product_id, Number(campaign.case_price));
+    }
+    return m;
+  }, [campaign, distributorId]);
+
   const total = useMemo(() => {
     let cases = 0;
     let value = 0;
     for (const r of rows || []) {
       const n = Number(qty[r.product_id] || 0);
       cases += n;
-      value += n * Number(r.case_price);
+      value += n * Number(campPrice.get(r.product_id) ?? r.case_price);
     }
     return { cases, value };
-  }, [rows, qty]);
+  }, [rows, qty, campPrice]);
 
   function applySuggestion() {
     const next = {};
@@ -94,7 +132,7 @@ export default function PlaceOrderPage() {
   async function submit() {
     const lines = (rows || [])
       .filter((r) => Number(qty[r.product_id] || 0) > 0)
-      .map((r) => ({ product_id: r.product_id, cases: Number(qty[r.product_id]), suggested_cases: r.suggested_cases }));
+      .map((r) => ({ product_id: r.product_id, cases: Number(qty[r.product_id]), suggested_cases: r.suggested_cases, campaign_id: campPrice.has(r.product_id) ? campaign.id : null }));
     if (!lines.length) {
       setMessage({ kind: 'error', text: 'En az bir ürün seçin.' });
       return;
@@ -123,6 +161,14 @@ export default function PlaceOrderPage() {
         <Link href="/market/teklifler" className="small">← Siparişler</Link>
         <h1 style={{ fontSize: 22 }}>Sipariş ver</h1>
       </div>
+
+      {campaign ? (
+        <div className="campaign">
+          <span className="tag">KAMPANYA</span>
+          <span className="strong">{campaign.title}</span>
+          <span className="small">{campaign.kind === 'bundle' ? 'Paket ürünleri sepete eklendi; paketin tamamı alınmalı.' : 'Ürün kampanya fiyatıyla sepete eklendi.'}</span>
+        </div>
+      ) : null}
 
       {message ? <div className={`notice ${message.kind}`} role="status">{message.text}</div> : null}
 
@@ -164,7 +210,7 @@ export default function PlaceOrderPage() {
                     <div key={r.product_id} className="list-row">
                       <div className="grow-1">
                         <span className="strong">{r.product_name}</span>
-                        <span className="muted small">Koli {tl(r.case_price)} · {r.case_qty} adet</span>
+                        <span className="muted small">Koli {tl(campPrice.get(r.product_id) ?? r.case_price)}{campPrice.has(r.product_id) ? ' (kampanya)' : ''} · {r.case_qty} adet</span>
                         <span className={days !== null && days <= 2 ? 'warn-text small' : 'muted small'}>
                           Kalan {num(r.stock_cases)} koli{days !== null ? ` · ~${num(days)} gün` : ''}
                           {r.suggested_cases > 0 ? ` · öneri ${r.suggested_cases} koli` : ''}

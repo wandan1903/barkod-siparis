@@ -40,7 +40,7 @@ export default function OffersPage() {
         .order('created_at', { ascending: false })
         .limit(10),
       supabase.rpc('retailer_stock_overview', { p_retailer: org.id }),
-      supabase.from('campaigns').select('id, kind, distributor_id, product_id, title, case_price, rule, ends_at, products!campaigns_product_id_fkey(name), campaign_items(product_id, cases, case_price, products(name))').gt('ends_at', new Date().toISOString()).lte('starts_at', new Date().toISOString()),
+      supabase.from('campaigns').select('id, kind, distributor_id, distributor:organizations!campaigns_distributor_id_fkey(name), product_id, title, case_price, rule, ends_at, products!campaigns_product_id_fkey(name), campaign_items(product_id, cases, case_price, products(name))').gt('ends_at', new Date().toISOString()).lte('starts_at', new Date().toISOString()),
     ]);
     if (o.error) setMessage({ kind: 'error', text: errorText(o.error) });
     const list = o.data || [];
@@ -166,6 +166,35 @@ export default function OffersPage() {
             );
           })}
         </section>
+      ) : null}
+
+      {campaigns.length ? (
+        <>
+          <h2 style={{ marginTop: 4 }}>Aktif kampanyalar</h2>
+          {campaigns.map((c) => (
+            <div key={c.id} className="campaign">
+              <span className="tag">{c.kind === 'bundle' ? 'PAKET KAMPANYA' : 'KAMPANYA'}</span>
+              <span className="strong">{c.title}</span>
+              <span className="muted small">{c.distributor ? c.distributor.name : 'Distribütör'}</span>
+              {c.kind === 'bundle' ? (
+                <>
+                  {(c.campaign_items || []).map((it) => (
+                    <span key={it.product_id} className="small">{it.cases} koli {it.products ? it.products.name : 'Ürün'} · koli {tl(it.case_price)}</span>
+                  ))}
+                  <span className="small">{shortDate(c.ends_at)} tarihine kadar · paketin tamamı alınmalı</span>
+                </>
+              ) : (
+                <span className="small">
+                  {c.products ? c.products.name : 'Ürün'}{c.case_price ? ` · koli ${tl(c.case_price)}` : ''} · {shortDate(c.ends_at)} tarihine kadar
+                  {c.rule && c.rule.min_cases > 1 ? ` · en az ${c.rule.min_cases} koli` : ''}
+                </span>
+              )}
+              <Link href={`/market/siparis-ver?kampanya=${c.id}`} className="btn small" style={{ alignSelf: 'flex-start' }}>
+                Bu kampanyayla sipariş ver
+              </Link>
+            </div>
+          ))}
+        </>
       ) : null}
 
       <h2 style={{ marginTop: 4 }}>Distribütörden gelen öneriler</h2>
