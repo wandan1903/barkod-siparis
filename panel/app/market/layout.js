@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { OrgContext } from '@/lib/org-context';
 import { loadMemberships } from '@/lib/memberships';
+import { useUnreadCount, UnreadBadge } from '@/components/NotificationBell';
 import './market.css';
 
 const ICON = {
@@ -39,6 +40,19 @@ const NAV = [
   { href: '/market/stok', label: 'Stok', icon: 'stock' },
   { href: '/market/ayarlar', label: 'Ayarlar', icon: 'settings' },
 ];
+
+function BellLink({ orgId }) {
+  const count = useUnreadCount(orgId);
+  return (
+    <Link href="/market/bildirimler" className="bell" aria-label={count ? `Bildirimler, ${count} yeni` : 'Bildirimler'}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" width="24" height="24">
+        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+        <path d="M13.7 21a2 2 0 0 1-3.4 0" />
+      </svg>
+      {count ? <span className="bell-count"><UnreadBadge count={count} /></span> : null}
+    </Link>
+  );
+}
 
 export default function MarketLayout({ children }) {
   const router = useRouter();
@@ -106,6 +120,7 @@ export default function MarketLayout({ children }) {
             <span className="hello">Barkod Sipariş</span>
             <span className="name">{state.org.name}</span>
           </div>
+          <BellLink orgId={state.org.id} />
         </header>
         <main className="m-main">{children}</main>
         <nav className="m-nav" aria-label="Ana menü">

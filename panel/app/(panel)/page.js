@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { useOrg } from '@/lib/org-context';
 import { num, tl, shortDate, STOCK_SOURCE_LABEL, errorText } from '@/lib/format';
+import MiniCalendar from '@/components/MiniCalendar';
 
 const REFRESH_MS = 60 * 1000;
 
@@ -160,6 +161,8 @@ export default function OverviewPage() {
 
       {message ? <div className={`notice ${message.kind}`} role="status">{message.text}</div> : null}
 
+      <div className="row">
+        <div className="grow" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <section className="kpis" aria-label="Özet">
         <div className="kpi"><span className="label">Bağlı market</span><span className="value">{markets.length}</span></div>
         <div className="kpi"><span className="label">Kritik ürün (2 gün ve altı)</span><span className={`value ${totals.critical ? 'warn' : ''}`}>{totals.critical}</span></div>
@@ -311,6 +314,11 @@ export default function OverviewPage() {
           </div>
         )}
       </section>
+        </div>
+        <aside className="aside" style={{ position: 'sticky', top: 20 }}>
+          <MiniCalendar />
+        </aside>
+      </div>
     </>
   );
 }

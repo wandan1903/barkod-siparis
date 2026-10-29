@@ -57,3 +57,7 @@
 .switch-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line-soft); }
 .switch-row:last-child { border-bottom: none; }
 .switch-row input[type="checkbox"] { width: 24px; height: 24px; accent-color: var(--green); flex-shrink: 0; }
+
+.bell { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px; color: var(--ink); background: #fff; text-decoration: none; }
+.bell:focus-visible { outline: 2px solid var(--green); }
+.bell-count { position: absolute; top: -4px; right: -4px; }

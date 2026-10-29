@@ -6,13 +6,30 @@ import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { OrgContext } from '@/lib/org-context';
 import { loadMemberships } from '@/lib/memberships';
+import { useUnreadCount, UnreadBadge } from '@/components/NotificationBell';
 
 const NAV = [
   { href: '/', label: 'Genel bakış' },
   { href: '/siparisler', label: 'Siparişler' },
   { href: '/urunler', label: 'Ürünler ve fiyatlar' },
   { href: '/entegrasyonlar', label: 'Entegrasyonlar' },
+  { href: '/bildirimler', label: 'Bildirimler', bell: true },
+  { href: '/ayarlar', label: 'Ayarlar' },
 ];
+
+function NavLink({ item, active, orgId }) {
+  return (
+    <Link href={item.href} className={active ? 'active' : ''}>
+      {item.label}
+      {item.bell ? <BellCount orgId={orgId} /> : null}
+    </Link>
+  );
+}
+
+function BellCount({ orgId }) {
+  const count = useUnreadCount(orgId);
+  return <UnreadBadge count={count} />;
+}
 
 export default function PanelLayout({ children }) {
   const router = useRouter();
@@ -84,9 +101,7 @@ export default function PanelLayout({ children }) {
           {NAV.map((item) => {
             const active = item.href === '/' ? pathname === '/' || pathname.startsWith('/marketler') : pathname.startsWith(item.href);
             return (
-              <Link key={item.href} href={item.href} className={active ? 'active' : ''}>
-                {item.label}
-              </Link>
+              <NavLink key={item.href} item={item} active={active} orgId={state.org.id} />
             );
           })}
           <span className="spacer" />

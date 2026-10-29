@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { useOrg } from '@/lib/org-context';
 import { num, tl, shortDate, errorText } from '@/lib/format';
+import MiniCalendar from '@/components/MiniCalendar';
 
 export default function MarketHome() {
   const { org } = useOrg();
@@ -112,6 +113,8 @@ export default function MarketHome() {
         )}
         {data.low.length > 6 ? <Link href="/market/stok" className="small">Tümünü gör ({data.low.length})</Link> : null}
       </section>
+
+      <MiniCalendar compact />
 
       <section className="kpis" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
         <div className="kpi"><span className="label">Bugünkü satış</span><span className="value">{data.salesCount}</span></div>

@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useOrg } from '@/lib/org-context';
 import { shortDate, errorText } from '@/lib/format';
 import Integrations from '@/components/Integrations';
+import NotificationSettings from '@/components/NotificationSettings';
 
 export default function SettingsPage() {
   const { org, user, signOut } = useOrg();
@@ -73,6 +74,8 @@ export default function SettingsPage() {
           ))
         )}
       </section>
+
+      <NotificationSettings />
 
       <Integrations side="retailer" />
 
