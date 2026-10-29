@@ -7,9 +7,10 @@ import { shortDate, errorText } from '@/lib/format';
 import Integrations from '@/components/Integrations';
 import NotificationSettings from '@/components/NotificationSettings';
 import TeamInvites from '@/components/TeamInvites';
+import AccountSettings from '@/components/AccountSettings';
 
 export default function SettingsPage() {
-  const { org, user, signOut } = useOrg();
+  const { org } = useOrg();
   const [links, setLinks] = useState(null);
   const [message, setMessage] = useState(null);
 
@@ -82,11 +83,7 @@ export default function SettingsPage() {
 
       <Integrations side="retailer" />
 
-      <section className="card">
-        <h2>Hesap</h2>
-        <p className="muted small">{user.email}</p>
-        <button className="btn" onClick={signOut}>Çıkış yap</button>
-      </section>
+      <AccountSettings withSignOut />
     </>
   );
 }
