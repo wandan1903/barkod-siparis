@@ -35,8 +35,11 @@ export default function ResetPasswordPage() {
       setError('Bu bağlantının süresi dolmuş ya da daha önce kullanılmış. Aşağıdan yeni bir bağlantı isteyin.');
       setStage('request');
     } else if (fromLink) {
-      // supabase-js adresteki kodu işleyip PASSWORD_RECOVERY olayını gönderir
-      setTimeout(() => setStage((s) => (s === 'loading' ? 'request' : s)), 3000);
+      // supabase-js adresteki kodu işleyip oturumu açar; olay kaçırılsa bile oturum var mı diye bakarız
+      supabase.auth.getSession().then(({ data }) => {
+        setStage(data.session ? 'set' : 'request');
+        if (!data.session) setError('Bağlantı doğrulanamadı. Aşağıdan yeni bir bağlantı isteyin.');
+      });
     } else {
       setStage('request');
     }
