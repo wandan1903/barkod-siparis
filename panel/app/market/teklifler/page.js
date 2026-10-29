@@ -7,9 +7,9 @@ import { useOrg } from '@/lib/org-context';
 import { num, tl, shortDate, ORDER_STATUS_LABEL, errorText } from '@/lib/format';
 
 const ORDER_SELECT =
-  'id, status, origin, total, delivery_date, created_at, distributor_id, note, ' +
+  'id, status, origin, total, delivery_date, created_at, distributor_id, note, distributor_note, ' +
   'distributor:organizations!orders_distributor_id_fkey(name), ' +
-  'order_lines(product_id, cases, case_price, suggested_cases, campaign_id, products(name, case_qty))';
+  'order_lines(product_id, cases, requested_cases, case_price, suggested_cases, campaign_id, products(name, case_qty))';
 
 export default function OffersPage() {
   const { org } = useOrg();
@@ -156,6 +156,16 @@ export default function OffersPage() {
                   <span className="strong">{o.distributor ? o.distributor.name : 'Distribütör'}</span>
                   <span className="muted small">{shortDate(o.created_at)} · {cases} koli · {tl(o.total)}</span>
                   <span className={`badge ${o.status === 'sent' ? 'info' : 'ok'}`} style={{ alignSelf: 'flex-start' }}>{label}</span>
+                  {o.origin === 'order' && o.status !== 'sent' && (o.order_lines || []).some((l) => l.requested_cases != null && l.cases < l.requested_cases) ? (
+                    <span className="small" style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {(o.order_lines || []).filter((l) => l.requested_cases != null && l.cases < l.requested_cases).map((l) => (
+                        <span key={l.product_id} className="warn-text">
+                          {l.products ? l.products.name : 'Ürün'}: {l.requested_cases} istendi → {l.cases} koli gönderilecek
+                        </span>
+                      ))}
+                    </span>
+                  ) : null}
+                  {o.distributor_note ? <span className="small muted">Distribütör notu: {o.distributor_note}</span> : null}
                 </div>
                 {o.status === 'sent' ? (
                   <button className="btn small" onClick={() => cancelOrder(o)} disabled={!!busy}>İptal et</button>

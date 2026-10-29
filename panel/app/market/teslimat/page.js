@@ -57,7 +57,7 @@ export default function DeliveryPage() {
       {!orders.length ? <p className="muted">Yolda olan teslimat yok.</p> : null}
 
       {orders.map((o) => {
-        const lines = o.order_lines || [];
+        const lines = (o.order_lines || []).filter((l) => l.cases > 0);
         const total = lines.reduce((s, l) => s + Number(accepted[`${o.id}:${l.product_id}`] ?? l.cases), 0);
         const ordered = lines.reduce((s, l) => s + l.cases, 0);
         return (

@@ -20,6 +20,7 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState(null);
   const [message, setMessage] = useState(null);
   const [busy, setBusy] = useState('');
+  const [review, setReview] = useState(null); // { order, qty, note }
 
   const load = useCallback(async () => {
     const { data, error: loadError } = await supabase
@@ -27,7 +28,7 @@ export default function OrdersPage() {
       .select(
         'id, status, origin, total, note, delivery_date, created_at, ' +
           'retailer:organizations!orders_retailer_id_fkey(name), ' +
-          'order_lines(product_id, cases, accepted_cases, case_price, products(name))'
+          'order_lines(product_id, cases, requested_cases, accepted_cases, case_price, products(name, case_qty))'
       )
       .eq('distributor_id', org.id)
       .order('created_at', { ascending: false });
@@ -56,6 +57,37 @@ export default function OrdersPage() {
       return;
     }
     setMessage({ kind: 'ok', text: okText });
+    load();
+  }
+
+  function openReview(order) {
+    const qty = {};
+    for (const l of order.order_lines || []) qty[l.product_id] = Number(l.requested_cases ?? l.cases);
+    setReview({ order, qty, note: '' });
+  }
+
+  function reviewQty(l, delta) {
+    const max = Number(l.requested_cases ?? l.cases);
+    const next = Math.min(max, Math.max(0, Number(review.qty[l.product_id]) + delta));
+    setReview({ ...review, qty: { ...review.qty, [l.product_id]: next } });
+  }
+
+  async function submitReview() {
+    const { order, qty, note } = review;
+    setBusy('review');
+    setMessage(null);
+    const lines = (order.order_lines || []).map((l) => ({ product_id: l.product_id, cases: Number(qty[l.product_id]) }));
+    const { data, error } = await supabase.rpc('approve_order_partial', { p_order: order.id, p_lines: lines, p_note: note });
+    setBusy('');
+    if (error) {
+      setMessage({ kind: 'error', text: errorText(error) });
+      return;
+    }
+    setReview(null);
+    setMessage({
+      kind: 'ok',
+      text: data === 'rejected' ? 'Hiç ürün gönderilemediği için sipariş reddedildi.' : 'Sipariş onaylandı. Sevkiyata hazır.',
+    });
     load();
   }
 
@@ -124,13 +156,8 @@ export default function OrdersPage() {
                           >
                             Reddet
                           </button>
-                          <button
-                            className="btn primary small"
-                            style={{ flex: 2 }}
-                            disabled={!!busy}
-                            onClick={() => setStatus(o, 'approved', 'Sipariş onaylandı. Sevkiyata hazır.')}
-                          >
-                            Onayla
+                          <button className="btn primary small" style={{ flex: 2 }} disabled={!!busy} onClick={() => openReview(o)}>
+                            İncele ve onayla
                           </button>
                         </div>
                       </>
@@ -153,6 +180,70 @@ export default function OrdersPage() {
           );
         })}
       </div>
+      {review ? (() => {
+        const { order, qty, note } = review;
+        const lines = order.order_lines || [];
+        const req = lines.reduce((t, l) => t + Number(l.requested_cases ?? l.cases), 0);
+        const sendCases = lines.reduce((t, l) => t + Number(qty[l.product_id]), 0);
+        const sendValue = lines.reduce((t, l) => t + Number(qty[l.product_id]) * Number(l.case_price), 0);
+        const cut = lines.some((l) => Number(qty[l.product_id]) < Number(l.requested_cases ?? l.cases));
+        return (
+          <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Sipariş önizleme" onClick={() => setReview(null)}>
+            <div className="modal" onClick={(e) => e.stopPropagation()}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
+                <div>
+                  <h2 style={{ margin: 0 }}>{order.retailer ? order.retailer.name : 'Market'} siparişi</h2>
+                  <span className="muted small">Oluşturuldu {shortDate(order.created_at)} · istenen {req} koli</span>
+                </div>
+                <button className="btn small" onClick={() => setReview(null)}>Kapat</button>
+              </div>
+              {order.note ? <div className="notice">Market notu: {order.note}</div> : null}
+              <p className="muted small" style={{ margin: 0 }}>
+                Elinizde yeterli ürün yoksa göndereceğiniz koli adedini düşürün. Market istediği ve onaylanan adedi görür.
+              </p>
+              <table>
+                <thead>
+                  <tr><th>Ürün</th><th>İstenen</th><th>Koli fiyatı</th><th>Göndereceğim</th></tr>
+                </thead>
+                <tbody>
+                  {lines.map((l) => {
+                    const max = Number(l.requested_cases ?? l.cases);
+                    const n = Number(qty[l.product_id]);
+                    return (
+                      <tr key={l.product_id}>
+                        <td>{l.products ? l.products.name : 'Ürün'}</td>
+                        <td>{max} koli</td>
+                        <td>{tl(l.case_price)}</td>
+                        <td>
+                          <span className="stepper">
+                            <button type="button" aria-label="Azalt" onClick={() => reviewQty(l, -1)}>−</button>
+                            <span className="val" style={n < max ? { color: 'var(--warn, #b45309)' } : undefined}>{n}</span>
+                            <button type="button" aria-label="Artır" onClick={() => reviewQty(l, 1)}>+</button>
+                          </span>
+                          {n < max ? <span className="small muted" style={{ display: 'block' }}>{max - n} koli eksik</span> : null}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {cut ? (
+                <div className="field">
+                  <label htmlFor="rv-note">Markete not (isteğe bağlı)</label>
+                  <input id="rv-note" className="input" placeholder="ör. Süt bu hafta kısıtlı, kalanı gelecek hafta" value={note} onChange={(e) => setReview({ ...review, note: e.target.value })} />
+                </div>
+              ) : null}
+              <div className="total-row"><span>{sendCases} / {req} koli gönderilecek</span><strong>{tl(sendValue)}</strong></div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn" disabled={!!busy} onClick={() => { const o = order; setReview(null); setStatus(o, 'rejected', 'Sipariş reddedildi.'); }}>Tümünü reddet</button>
+                <button className="btn primary" style={{ flex: 1 }} disabled={!!busy || sendCases === 0} onClick={submitReview}>
+                  {busy === 'review' ? 'Onaylanıyor…' : cut ? 'Kısmen onayla' : 'Siparişi onayla'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })() : null}
     </>
   );
 }
