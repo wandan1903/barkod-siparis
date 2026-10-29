@@ -2,6 +2,7 @@
 
 import { useOrg } from '@/lib/org-context';
 import NotificationSettings from '@/components/NotificationSettings';
+import AutoOfferSettings from '@/components/AutoOfferSettings';
 
 export default function AyarlarPage() {
   const { org, user } = useOrg();
@@ -13,6 +14,7 @@ export default function AyarlarPage() {
           <p className="sub">{org.name} · {user.email}</p>
         </div>
       </div>
+      <AutoOfferSettings />
       <NotificationSettings />
     </>
   );

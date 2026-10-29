@@ -40,7 +40,7 @@ export default function OffersPage() {
         .order('created_at', { ascending: false })
         .limit(10),
       supabase.rpc('retailer_stock_overview', { p_retailer: org.id }),
-      supabase.from('campaigns').select('id, distributor_id, product_id, title, case_price, rule, ends_at, products(name)').gt('ends_at', new Date().toISOString()),
+      supabase.from('campaigns').select('id, kind, distributor_id, product_id, title, case_price, rule, ends_at, products(name), campaign_items(product_id, cases, case_price, products(name))').gt('ends_at', new Date().toISOString()).lte('starts_at', new Date().toISOString()),
     ]);
     if (o.error) setMessage({ kind: 'error', text: errorText(o.error) });
     const list = o.data || [];
@@ -124,6 +124,16 @@ export default function OffersPage() {
     load();
   }
 
+  async function addBundle(order, campaign) {
+    setMessage(null);
+    const { error } = await supabase.rpc('add_bundle_to_order', { p_order: order.id, p_campaign: campaign.id });
+    if (error) {
+      setMessage({ kind: 'error', text: errorText(error) });
+      return;
+    }
+    load();
+  }
+
   if (!offers) return <div className="center">Yükleniyor…</div>;
 
   return (
@@ -164,7 +174,13 @@ export default function OffersPage() {
       {offers.map((order) => {
         const lines = order.order_lines || [];
         const inOrder = new Set(lines.map((l) => l.product_id));
-        const offerCampaigns = campaigns.filter((c) => c.distributor_id === order.distributor_id && !inOrder.has(c.product_id));
+        const usedCampaigns = new Set(lines.map((l) => l.campaign_id).filter(Boolean));
+        const offerCampaigns = campaigns.filter(
+          (c) =>
+            c.distributor_id === order.distributor_id &&
+            !usedCampaigns.has(c.id) &&
+            (c.kind === 'bundle' || !inOrder.has(c.product_id))
+        );
         const cases = lines.reduce((s, l) => s + Number(qty[`${order.id}:${l.product_id}`] ?? l.cases), 0);
         return (
           <section key={order.id} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -201,8 +217,22 @@ export default function OffersPage() {
               <div key={c.id} className="campaign">
                 <span className="tag">BU HAFTA KAMPANYA</span>
                 <span className="strong">{c.title}</span>
-                {c.case_price ? <span className="small">Koli {tl(c.case_price)} · {shortDate(c.ends_at)} tarihine kadar</span> : null}
-                <button className="btn small" style={{ alignSelf: 'flex-start' }} onClick={() => addCampaign(order, c)}>Siparişe ekle</button>
+                {c.kind === 'bundle' ? (
+                  <>
+                    {(c.campaign_items || []).map((it) => (
+                      <span key={it.product_id} className="small">{it.cases} koli {it.products ? it.products.name : 'Ürün'} · koli {tl(it.case_price)}</span>
+                    ))}
+                    <span className="small">{shortDate(c.ends_at)} tarihine kadar · paketin tamamı alınmalı</span>
+                  </>
+                ) : (
+                  <>
+                    {c.case_price ? <span className="small">Koli {tl(c.case_price)} · {shortDate(c.ends_at)} tarihine kadar</span> : null}
+                    {c.rule && c.rule.min_cases > 1 ? <span className="small">En az {c.rule.min_cases} koli</span> : null}
+                  </>
+                )}
+                <button className="btn small" style={{ alignSelf: 'flex-start' }} onClick={() => (c.kind === 'bundle' ? addBundle(order, c) : addCampaign(order, c))}>
+                  {c.kind === 'bundle' ? 'Paketi siparişe ekle' : 'Siparişe ekle'}
+                </button>
               </div>
             ))}
 
