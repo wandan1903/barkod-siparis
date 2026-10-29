@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
@@ -65,6 +66,9 @@ export default function LoginPage() {
         <button className="btn primary" type="submit" disabled={busy}>
           {busy ? 'Giriş yapılıyor…' : 'Giriş yap'}
         </button>
+        <Link href={`/sifre-yenile${email ? `?email=${encodeURIComponent(email)}` : ''}`} className="small" style={{ textAlign: 'center' }}>
+          Şifremi unuttum
+        </Link>
       </form>
     </div>
   );
