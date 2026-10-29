@@ -20,6 +20,7 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState(null);
   const [message, setMessage] = useState(null);
   const [busy, setBusy] = useState('');
+  const [depot, setDepot] = useState(new Map()); // product_id -> depodaki adet
   const [review, setReview] = useState(null); // { order, qty, note }
 
   const load = useCallback(async () => {
@@ -38,6 +39,8 @@ export default function OrdersPage() {
       return;
     }
     setOrders(data || []);
+    const w = await supabase.from('warehouse_stock').select('product_id, qty_units').eq('distributor_id', org.id);
+    setDepot(new Map((w.data || []).map((r) => [r.product_id, r.qty_units])));
   }, [org.id]);
 
   useEffect(() => {
@@ -62,7 +65,12 @@ export default function OrdersPage() {
 
   function openReview(order) {
     const qty = {};
-    for (const l of order.order_lines || []) qty[l.product_id] = Number(l.requested_cases ?? l.cases);
+    for (const l of order.order_lines || []) {
+      const want = Number(l.requested_cases ?? l.cases);
+      const inDepot = depot.get(l.product_id);
+      // Depoda takip edilen ürün: varsayılan olarak depoda olan kadarı gönderilir
+      qty[l.product_id] = inDepot === undefined ? want : Math.min(want, Math.floor(inDepot / Math.max(1, Number(l.products?.case_qty) || 1)));
+    }
     setReview({ order, qty, note: '' });
   }
 
@@ -212,7 +220,14 @@ export default function OrdersPage() {
                     return (
                       <tr key={l.product_id}>
                         <td>{l.products ? l.products.name : 'Ürün'}</td>
-                        <td>{max} koli</td>
+                        <td>
+                          {max} koli
+                          {depot.has(l.product_id) ? (
+                            <span className={`small ${Math.floor(depot.get(l.product_id) / Math.max(1, Number(l.products?.case_qty) || 1)) < max ? 'warn-text' : 'muted'}`} style={{ display: 'block' }}>
+                              Depoda {Math.floor(depot.get(l.product_id) / Math.max(1, Number(l.products?.case_qty) || 1))} koli
+                            </span>
+                          ) : null}
+                        </td>
                         <td>{tl(l.case_price)}</td>
                         <td>
                           <span className="stepper">
