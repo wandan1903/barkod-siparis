@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { supabase, signOutSafely } from '@/lib/supabase';
 import { useOrg } from '@/lib/org-context';
-import { errorText } from '@/lib/format';
+import { errorText, authErrorText } from '@/lib/format';
 
 // Firma bilgileri (ad, vergi no, il/ilçe), kullanıcı hesabı ve şifre değiştirme
 export default function AccountSettings({ withSignOut = false }) {
@@ -80,7 +80,7 @@ export default function AccountSettings({ withSignOut = false }) {
     const { error } = await supabase.auth.updateUser({ password: pw.next });
     setPwBusy(false);
     if (error) {
-      setPwMessage({ kind: 'error', text: errorText(error) });
+      setPwMessage({ kind: 'error', text: authErrorText(error) });
       return;
     }
     setPw({ next: '', again: '' });
@@ -88,7 +88,7 @@ export default function AccountSettings({ withSignOut = false }) {
   }
 
   async function signOut() {
-    await supabase.auth.signOut();
+    await signOutSafely();
     router.replace('/giris');
   }
 

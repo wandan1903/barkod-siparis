@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { supabase, signOutSafely } from '@/lib/supabase';
 import { OrgContext } from '@/lib/org-context';
 import { loadMemberships } from '@/lib/memberships';
 import { useUnreadCount, UnreadBadge } from '@/components/NotificationBell';
@@ -94,7 +94,7 @@ export default function MarketLayout({ children }) {
   }, [router]);
 
   async function signOut() {
-    await supabase.auth.signOut();
+    await signOutSafely();
     router.replace('/giris');
   }
 

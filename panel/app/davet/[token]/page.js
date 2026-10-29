@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { supabase, signOutSafely } from '@/lib/supabase';
 import { errorText } from '@/lib/format';
 import { loadMemberships } from '@/lib/memberships';
 
@@ -91,7 +91,7 @@ export default function InvitePage() {
   }
 
   async function switchAccount() {
-    await supabase.auth.signOut();
+    await signOutSafely();
     setSession(null);
   }
 

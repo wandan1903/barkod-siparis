@@ -69,3 +69,17 @@ export function errorText(error) {
   if (!error) return '';
   return error.message || String(error);
 }
+
+// Giriş / şifre işlemlerinde Supabase'in İngilizce hata mesajlarını Türkçeleştirir
+export function authErrorText(error) {
+  if (!error) return '';
+  const code = String(error.code || '').toLowerCase();
+  const msg = String(error.message || '').toLowerCase();
+  if (code === 'same_password' || msg.includes('different from the old')) return 'Yeni şifre eski şifrenizle aynı olamaz.';
+  if (code === 'weak_password' || msg.includes('weak') || msg.includes('at least')) return 'Şifre çok zayıf. Daha uzun ve tahmin edilmesi zor bir şifre seçin (harf, rakam karışık).';
+  if (code === 'reauthentication_needed' || msg.includes('reauthentic')) return 'Güvenlik için çıkış yapıp tekrar giriş yaptıktan sonra şifrenizi değiştirin.';
+  if (msg.includes('pwned') || msg.includes('compromised') || msg.includes('leaked')) return 'Bu şifre veri sızıntılarında görülmüş. Başka bir şifre seçin.';
+  if (code === 'over_request_rate_limit' || msg.includes('rate limit')) return 'Çok fazla deneme yapıldı. Biraz bekleyip tekrar deneyin.';
+  if (msg.includes('session') && msg.includes('missing')) return 'Oturumunuz sona ermiş. Tekrar giriş yapın.';
+  return error.message || String(error);
+}
