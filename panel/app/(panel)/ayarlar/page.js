@@ -3,6 +3,7 @@
 import { useOrg } from '@/lib/org-context';
 import NotificationSettings from '@/components/NotificationSettings';
 import AutoOfferSettings from '@/components/AutoOfferSettings';
+import TeamInvites from '@/components/TeamInvites';
 
 export default function AyarlarPage() {
   const { org, user } = useOrg();
@@ -16,6 +17,7 @@ export default function AyarlarPage() {
       </div>
       <AutoOfferSettings />
       <NotificationSettings />
+      <TeamInvites />
     </>
   );
 }

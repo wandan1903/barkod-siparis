@@ -11,6 +11,7 @@ import { useUnreadCount, UnreadBadge } from '@/components/NotificationBell';
 const NAV = [
   { href: '/', label: 'Genel bakış' },
   { href: '/siparisler', label: 'Siparişler' },
+  { href: '/marketler', label: 'Marketler' },
   { href: '/urunler', label: 'Ürünler ve fiyatlar' },
   { href: '/depo', label: 'Depo' },
   { href: '/kampanyalar', label: 'Kampanyalar' },
@@ -101,7 +102,7 @@ export default function PanelLayout({ children }) {
           <span className="brand">Barkod Sipariş</span>
           <span className="org">{state.org.name}</span>
           {NAV.map((item) => {
-            const active = item.href === '/' ? pathname === '/' || pathname.startsWith('/marketler') : pathname.startsWith(item.href);
+            const active = item.href === '/' ? pathname === '/' || pathname.startsWith('/marketler/') : pathname.startsWith(item.href) && !(item.href === '/marketler' && pathname.startsWith('/marketler/'));
             return (
               <NavLink key={item.href} item={item} active={active} orgId={state.org.id} />
             );

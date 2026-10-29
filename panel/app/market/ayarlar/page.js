@@ -6,6 +6,7 @@ import { useOrg } from '@/lib/org-context';
 import { shortDate, errorText } from '@/lib/format';
 import Integrations from '@/components/Integrations';
 import NotificationSettings from '@/components/NotificationSettings';
+import TeamInvites from '@/components/TeamInvites';
 
 export default function SettingsPage() {
   const { org, user, signOut } = useOrg();
@@ -76,6 +77,8 @@ export default function SettingsPage() {
       </section>
 
       <NotificationSettings />
+
+      <TeamInvites />
 
       <Integrations side="retailer" />
 
