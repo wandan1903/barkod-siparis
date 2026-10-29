@@ -40,7 +40,7 @@ export default function OffersPage() {
         .order('created_at', { ascending: false })
         .limit(10),
       supabase.rpc('retailer_stock_overview', { p_retailer: org.id }),
-      supabase.from('campaigns').select('id, kind, distributor_id, product_id, title, case_price, rule, ends_at, products(name), campaign_items(product_id, cases, case_price, products(name))').gt('ends_at', new Date().toISOString()).lte('starts_at', new Date().toISOString()),
+      supabase.from('campaigns').select('id, kind, distributor_id, product_id, title, case_price, rule, ends_at, products!campaigns_product_id_fkey(name), campaign_items(product_id, cases, case_price, products(name))').gt('ends_at', new Date().toISOString()).lte('starts_at', new Date().toISOString()),
     ]);
     if (o.error) setMessage({ kind: 'error', text: errorText(o.error) });
     const list = o.data || [];

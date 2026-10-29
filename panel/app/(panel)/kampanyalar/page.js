@@ -53,7 +53,7 @@ export default function CampaignsPage() {
       supabase
         .from('campaigns')
         .select(
-          'id, kind, title, product_id, case_price, rule, target, starts_at, ends_at, created_at, products(name), campaign_items(product_id, cases, case_price, products(name))'
+          'id, kind, title, product_id, case_price, rule, target, starts_at, ends_at, created_at, products!campaigns_product_id_fkey(name), campaign_items(product_id, cases, case_price, products(name))'
         )
         .eq('distributor_id', org.id)
         .order('created_at', { ascending: false }),
