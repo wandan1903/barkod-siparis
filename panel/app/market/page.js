@@ -16,7 +16,7 @@ export default function MarketHome() {
     async function load() {
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
-      const [stock, orders, sales] = await Promise.all([
+      const [stock, orders, sales, acc] = await Promise.all([
         supabase.rpc('retailer_stock_overview', { p_retailer: org.id }),
         supabase
           .from('orders')
@@ -24,6 +24,7 @@ export default function MarketHome() {
           .eq('retailer_id', org.id)
           .in('status', ['sent', 'shipped']),
         supabase.from('sales').select('id, total').eq('retailer_id', org.id).gte('created_at', startOfDay.toISOString()),
+        supabase.rpc('account_balances', { p_org: org.id }),
       ]);
       if (stock.error) setError(errorText(stock.error));
       const low = (stock.data || [])
@@ -36,6 +37,8 @@ export default function MarketHome() {
         shipments: (orders.data || []).filter((o) => o.status === 'shipped'),
         salesCount: (sales.data || []).length,
         salesTotal: (sales.data || []).reduce((s, x) => s + Number(x.total || 0), 0),
+        debt: (acc.data || []).reduce((s, x) => s + Number(x.balance || 0), 0),
+        overdue: (acc.data || []).reduce((s, x) => s + Number(x.overdue || 0), 0),
       });
     }
     load();
@@ -58,6 +61,20 @@ export default function MarketHome() {
           </span>
           <span style={{ fontSize: 14, opacity: 0.92 }}>{offerCases} koli · {tl(firstOffer.total)}</span>
           <Link href="/market/teklifler" className="btn">Öneriyi incele</Link>
+        </section>
+      ) : null}
+
+      {data.debt > 0 ? (
+        <section className="list">
+          <div className="list-row">
+            <div className="grow-1">
+              <span className="strong">Distribütöre borcunuz: {tl(data.debt)}</span>
+              <span className={data.overdue > 0 ? 'warn-text small' : 'muted small'}>
+                {data.overdue > 0 ? `Vadesi geçen: ${tl(data.overdue)}` : 'Vadesi geçmiş borcunuz yok'}
+              </span>
+            </div>
+            <Link href="/market/cari" className="btn small">Ekstre</Link>
+          </div>
         </section>
       ) : null}
 

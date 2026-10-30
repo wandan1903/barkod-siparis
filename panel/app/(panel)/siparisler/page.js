@@ -21,13 +21,14 @@ export default function OrdersPage() {
   const [message, setMessage] = useState(null);
   const [busy, setBusy] = useState('');
   const [depot, setDepot] = useState(new Map()); // product_id -> depodaki adet
+  const [accounts, setAccounts] = useState(new Map()); // retailer_id -> cari özeti
   const [review, setReview] = useState(null); // { order, qty, note }
 
   const load = useCallback(async () => {
     const { data, error: loadError } = await supabase
       .from('orders')
       .select(
-        'id, status, origin, total, note, delivery_date, created_at, ' +
+        'id, status, origin, total, note, delivery_date, created_at, retailer_id, ' +
           'retailer:organizations!orders_retailer_id_fkey(name), ' +
           'order_lines(product_id, cases, requested_cases, accepted_cases, case_price, products(name, case_qty))'
       )
@@ -41,6 +42,8 @@ export default function OrdersPage() {
     setOrders(data || []);
     const w = await supabase.from('warehouse_stock').select('product_id, qty_units').eq('distributor_id', org.id);
     setDepot(new Map((w.data || []).map((r) => [r.product_id, r.qty_units])));
+    const acc = await supabase.rpc('account_balances', { p_org: org.id });
+    setAccounts(new Map((acc.data || []).map((r) => [r.retailer_id, r])));
   }, [org.id]);
 
   useEffect(() => {
@@ -206,6 +209,20 @@ export default function OrdersPage() {
                 <button className="btn small" onClick={() => setReview(null)}>Kapat</button>
               </div>
               {order.note ? <div className="notice">Market notu: {order.note}</div> : null}
+              {(() => {
+                const a = accounts.get(order.retailer_id);
+                if (!a) return null;
+                const after = Number(a.balance) + sendValue;
+                const overLimit = a.credit_limit != null && after > Number(a.credit_limit);
+                const warn = overLimit || Number(a.overdue) > 0;
+                return (
+                  <div className={`notice ${warn ? 'error' : ''}`} role="status">
+                    Cari: bakiye <strong>{tl(a.balance)}</strong>
+                    {Number(a.overdue) > 0 ? <> · vadesi geçen <strong>{tl(a.overdue)}</strong> ({a.oldest_overdue_days} gün)</> : ' · gecikme yok'}
+                    {a.credit_limit != null ? <> · limit {tl(a.credit_limit)}{overLimit ? <> · <strong>bu siparişle limit aşılıyor ({tl(after)})</strong></> : null}</> : null}
+                  </div>
+                );
+              })()}
               <p className="muted small" style={{ margin: 0 }}>
                 Elinizde yeterli ürün yoksa göndereceğiniz koli adedini düşürün. Market istediği ve onaylanan adedi görür.
               </p>
