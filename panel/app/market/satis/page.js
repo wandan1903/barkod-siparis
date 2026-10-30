@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { useOrg } from '@/lib/org-context';
 import { tl, errorText } from '@/lib/format';
@@ -12,6 +13,7 @@ export default function SalePage() {
   const [cart, setCart] = useState([]);
   const [message, setMessage] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [credit, setCredit] = useState(null); // veresiye: { customers, customerId }
 
   const loadCatalog = useCallback(async () => {
     const { data } = await supabase.rpc('retailer_stock_overview', { p_retailer: org.id });
@@ -96,6 +98,38 @@ export default function SalePage() {
     loadCatalog();
   }
 
+  async function openCredit() {
+    setMessage(null);
+    const { data, error } = await supabase.rpc('customer_balances', { p_retailer: org.id });
+    if (error) {
+      setMessage({ kind: 'error', text: errorText(error) });
+      return;
+    }
+    const list = (data || []).filter((c) => c.active).sort((a, b) => a.name.localeCompare(b.name, 'tr'));
+    setCredit({ customers: list, customerId: list.length === 1 ? list[0].customer_id : '' });
+  }
+
+  async function completeOnCredit() {
+    if (!cart.length || !credit || !credit.customerId) return;
+    const cust = credit.customers.find((c) => c.customer_id === credit.customerId);
+    setBusy(true);
+    const { error } = await supabase.rpc('record_credit_sale', {
+      p_retailer: org.id,
+      p_lines: cart.map((x) => ({ product_id: x.product_id, qty_units: x.qty })),
+      p_customer: credit.customerId,
+      p_note: null,
+    });
+    setBusy(false);
+    if (error) {
+      setMessage({ kind: 'error', text: errorText(error) });
+      return;
+    }
+    setMessage({ kind: 'ok', text: `${tl(total)} ${cust ? cust.name : 'müşteri'} adına veresiyeye yazıldı. Stok güncellendi.` });
+    setCart([]);
+    setCredit(null);
+    loadCatalog();
+  }
+
   return (
     <>
       <h1 style={{ fontSize: 22 }}>Satış</h1>
@@ -131,9 +165,44 @@ export default function SalePage() {
         <section className="sticky-foot">
           <div className="total-row"><span>Toplam</span><strong>{tl(total)}</strong></div>
           {missingPrice ? <span className="muted small">Fiyatı girilmemiş ürünler 0 ₺ sayılır. Fiyatları Stok ekranından girebilirsiniz.</span> : null}
-          <button className="btn primary" style={{ minHeight: 52 }} onClick={complete} disabled={busy}>
-            {busy ? 'Kaydediliyor…' : 'Satışı tamamla'}
-          </button>
+          {credit ? (
+            <>
+              {credit.customers.length ? (
+                <div className="field">
+                  <label htmlFor="credit-cust">Veresiye yazılacak müşteri</label>
+                  <select id="credit-cust" className="input" value={credit.customerId} onChange={(e) => setCredit({ ...credit, customerId: e.target.value })}>
+                    <option value="">Müşteri seçin</option>
+                    {credit.customers.map((c) => (
+                      <option key={c.customer_id} value={c.customer_id}>
+                        {c.name}{Number(c.balance) > 0 ? ` · borç ${tl(c.balance)}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <span className="muted small">Kayıtlı müşteri yok. Önce <Link href="/market/veresiye">Veresiye</Link> sayfasından müşteri ekleyin.</span>
+              )}
+              {(() => {
+                const c = credit.customers.find((x) => x.customer_id === credit.customerId);
+                return c && c.credit_limit != null && Number(c.balance) + total > Number(c.credit_limit) ? (
+                  <div className="notice error" role="status">{c.name} bu satışla limitini ({tl(c.credit_limit)}) aşıyor.</div>
+                ) : null;
+              })()}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn" style={{ flex: 1 }} onClick={() => setCredit(null)} disabled={busy}>Vazgeç</button>
+                <button className="btn primary" style={{ flex: 2, minHeight: 52 }} onClick={completeOnCredit} disabled={busy || !credit.customerId}>
+                  {busy ? 'Kaydediliyor…' : 'Veresiyeye yaz'}
+                </button>
+              </div>
+            </>
+          ) : (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn" style={{ flex: 1, minHeight: 52 }} onClick={openCredit} disabled={busy}>Veresiye</button>
+              <button className="btn primary" style={{ flex: 2, minHeight: 52 }} onClick={complete} disabled={busy}>
+                {busy ? 'Kaydediliyor…' : 'Satışı tamamla'}
+              </button>
+            </div>
+          )}
         </section>
       ) : null}
     </>

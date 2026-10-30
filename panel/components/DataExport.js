@@ -182,6 +182,32 @@ const DISTRIBUTOR_SETS = [
 
 const RETAILER_SETS = [
   {
+    key: 'veresiye-musteriler',
+    label: 'Veresiye müşterileri ve bakiyeler',
+    run: async (org) => {
+      const { data, error } = await supabase.rpc('customer_balances', { p_retailer: org.id });
+      if (error) throw error;
+      return {
+        header: ['Müşteri', 'Telefon', 'Not', 'Limit', 'Bakiye', 'Borç yaşı (gün)', 'Son ödeme', 'Aktif'],
+        rows: (data || []).map((c) => [c.name, c.phone || '', c.note || '', n(c.credit_limit), n(c.balance), n(c.oldest_open_days), d(c.last_payment_date), c.active ? 'Evet' : 'Hayır']),
+      };
+    },
+  },
+  {
+    key: 'veresiye-hareketleri',
+    label: 'Veresiye hareketleri',
+    run: async (org) => {
+      const data = await fetchAll(() =>
+        supabase.from('customer_entries').select('entry_date, kind, amount, method, note, customers(name)').eq('retailer_id', org.id).order('entry_date').order('created_at')
+      );
+      const K = { veresiye: 'Veresiye', odeme: 'Ödeme', duzeltme: 'Düzeltme', iptal: 'İptal' };
+      return {
+        header: ['Tarih', 'Müşteri', 'İşlem', 'Ödeme şekli', 'Borç', 'Ödeme', 'Açıklama'],
+        rows: data.map((e) => [d(e.entry_date), e.customers?.name || '', K[e.kind] || e.kind, e.method || '', Number(e.amount) > 0 ? Number(e.amount) : '', Number(e.amount) < 0 ? -Number(e.amount) : '', e.note || '']),
+      };
+    },
+  },
+  {
     key: 'urunler',
     label: 'Ürünler, raf fiyatları ve stok',
     run: async (org) => {

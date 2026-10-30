@@ -83,3 +83,11 @@ export function authErrorText(error) {
   if (msg.includes('session') && msg.includes('missing')) return 'Oturumunuz sona ermiş. Tekrar giriş yapın.';
   return error.message || String(error);
 }
+
+// "1.250,50", "1250.5", "150 TL" → sayı
+export function parseAmount(raw) {
+  let s = String(raw || '').trim().replace(/\s|TL|₺/gi, '');
+  if (!s) return NaN;
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+  return Number(s);
+}

@@ -25,6 +25,12 @@ const ICON = {
       <path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9" />
     </>
   ),
+  credit: (
+    <>
+      <path d="M4 4h12a4 4 0 0 1 4 4v12H8a4 4 0 0 1-4-4z" />
+      <path d="M8 9h8M8 13h5" />
+    </>
+  ),
   settings: (
     <>
       <circle cx="12" cy="12" r="3" />
@@ -38,6 +44,7 @@ const NAV = [
   { href: '/market/satis', label: 'Satış', icon: 'sale' },
   { href: '/market/teklifler', label: 'Sipariş', icon: 'offer' },
   { href: '/market/stok', label: 'Stok', icon: 'stock' },
+  { href: '/market/veresiye', label: 'Veresiye', icon: 'credit' },
   { href: '/market/ayarlar', label: 'Ayarlar', icon: 'settings' },
 ];
 
