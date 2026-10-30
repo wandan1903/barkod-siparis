@@ -8,6 +8,7 @@ import Integrations from '@/components/Integrations';
 import NotificationSettings from '@/components/NotificationSettings';
 import TeamInvites from '@/components/TeamInvites';
 import AccountSettings from '@/components/AccountSettings';
+import DataExport from '@/components/DataExport';
 
 export default function SettingsPage() {
   const { org } = useOrg();
@@ -80,6 +81,8 @@ export default function SettingsPage() {
       <NotificationSettings />
 
       <TeamInvites />
+
+      <DataExport side="retailer" />
 
       <Integrations side="retailer" />
 

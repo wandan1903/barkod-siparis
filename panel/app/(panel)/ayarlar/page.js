@@ -5,6 +5,7 @@ import NotificationSettings from '@/components/NotificationSettings';
 import AutoOfferSettings from '@/components/AutoOfferSettings';
 import TeamInvites from '@/components/TeamInvites';
 import AccountSettings from '@/components/AccountSettings';
+import DataExport from '@/components/DataExport';
 
 export default function AyarlarPage() {
   const { org, user } = useOrg();
@@ -20,6 +21,7 @@ export default function AyarlarPage() {
       <AutoOfferSettings />
       <NotificationSettings />
       <TeamInvites />
+      <DataExport side="distributor" />
     </>
   );
 }
