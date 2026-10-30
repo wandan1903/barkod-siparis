@@ -170,6 +170,7 @@ export default function WarehousePage() {
           <h1>Depo</h1>
           <p className="sub">Kendi stoğunuz: barkod okutarak depoya ekleyin, çıkarın ya da sayın. Sevkiyata çıkan siparişler stoğu otomatik düşer.</p>
         </div>
+        <Link href="/etiket" className="btn outline">Etiket yazdır</Link>
       </div>
 
       {message ? <div className={`notice ${message.kind}`} role="status">{message.text}</div> : null}

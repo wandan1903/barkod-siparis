@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useOrg } from '@/lib/org-context';
 import { tl, errorText } from '@/lib/format';
 import BarcodeInput from '@/components/BarcodeInput';
+import { newRef, isNetworkError, enqueueSale, saveCatalog, loadCatalog as loadCachedCatalog } from '@/lib/offline';
 
 export default function SalePage() {
   const { org } = useOrg();
@@ -16,9 +17,23 @@ export default function SalePage() {
   const [credit, setCredit] = useState(null); // veresiye: { customers, customerId }
 
   const loadCatalog = useCallback(async () => {
-    const { data } = await supabase.rpc('retailer_stock_overview', { p_retailer: org.id });
+    let rows = null;
+    try {
+      const { data, error } = await supabase.rpc('retailer_stock_overview', { p_retailer: org.id });
+      if (!error && data) {
+        rows = data.map((r) => ({ product_id: r.product_id, product_name: r.product_name, gtin: r.gtin, shelf_price: r.shelf_price, stock_units: r.stock_units }));
+        saveCatalog(org.id, rows);
+      }
+    } catch (e) {
+      rows = null;
+    }
+    if (!rows) {
+      // internet yok: bu cihazda saklanan son ürün listesiyle devam
+      const cached = loadCachedCatalog(org.id);
+      rows = cached ? cached.rows : [];
+    }
     const map = new Map();
-    for (const r of data || []) {
+    for (const r of rows) {
       map.set(r.gtin, {
         product_id: r.product_id,
         name: r.product_name,
@@ -54,6 +69,10 @@ export default function SalePage() {
         addToCart(known);
         return;
       }
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        setMessage({ kind: 'error', text: `${code} bu cihazdaki ürün listesinde yok. İnternet gelince tekrar deneyin.` });
+        return;
+      }
       const { data: product } = await supabase.from('products').select('id, name, gtin').eq('gtin', code).maybeSingle();
       if (!product) {
         setMessage({ kind: 'error', text: `${code} barkodlu ürün kayıtlı değil.` });
@@ -84,11 +103,35 @@ export default function SalePage() {
   async function complete() {
     if (!cart.length) return;
     setBusy(true);
-    const { error } = await supabase.rpc('record_sale', {
-      p_retailer: org.id,
-      p_lines: cart.map((x) => ({ product_id: x.product_id, qty_units: x.qty })),
-    });
+    const sale = {
+      ref: newRef(),
+      at: new Date().toISOString(),
+      lines: cart.map((x) => ({ product_id: x.product_id, qty_units: x.qty })),
+      total,
+      count: cart.reduce((s, x) => s + x.qty, 0),
+    };
+    let error = null;
+    try {
+      ({ error } = await supabase.rpc('record_sale_offline', {
+        p_retailer: org.id,
+        p_lines: sale.lines,
+        p_client_ref: sale.ref,
+        p_sold_at: sale.at,
+      }));
+    } catch (e) {
+      error = e;
+    }
     setBusy(false);
+    if (error && isNetworkError(error)) {
+      // internet yok: satış cihazda bekler, internet gelince otomatik gönderilir
+      if (!enqueueSale(org.id, sale)) {
+        setMessage({ kind: 'error', text: 'İnternet yok ve satış bu cihaza kaydedilemedi (tarayıcı depolaması kapalı).' });
+        return;
+      }
+      setMessage({ kind: 'ok', text: `İnternet yok: ${tl(total)} satış cihazda bekletildi, internet gelince gönderilecek.` });
+      setCart([]);
+      return;
+    }
     if (error) {
       setMessage({ kind: 'error', text: errorText(error) });
       return;
@@ -100,9 +143,15 @@ export default function SalePage() {
 
   async function openCredit() {
     setMessage(null);
-    const { data, error } = await supabase.rpc('customer_balances', { p_retailer: org.id });
+    let data = null;
+    let error = null;
+    try {
+      ({ data, error } = await supabase.rpc('customer_balances', { p_retailer: org.id }));
+    } catch (e) {
+      error = e;
+    }
     if (error) {
-      setMessage({ kind: 'error', text: errorText(error) });
+      setMessage({ kind: 'error', text: isNetworkError(error) ? 'Veresiyeye yazmak için internet gerekir. Satışı normal tamamlayabilirsiniz.' : errorText(error) });
       return;
     }
     const list = (data || []).filter((c) => c.active).sort((a, b) => a.name.localeCompare(b.name, 'tr'));

@@ -62,7 +62,7 @@ export default function TeamInvites() {
       <div>
         <h2 style={{ margin: 0 }}>Ekip</h2>
         <p className="muted small" style={{ margin: '4px 0 0' }}>
-          {org.name} hesabına çalışanlarınızı ekleyin. Davet bağlantısıyla kayıt olan kişi aynı verileri görür ve işlem yapabilir.
+          {org.name} hesabına çalışanlarınızı ekleyin. Davet bağlantısıyla kayıt olan herkes aynı yetkiye sahiptir: her şeyi görür ve her işlemi yapabilir.
         </p>
       </div>
       {message ? <div className={`notice ${message.kind}`} role="status">{message.text}</div> : null}
@@ -75,7 +75,7 @@ export default function TeamInvites() {
             <div key={m.user_id} className="list-row">
               <span className="grow-1">
                 <span className="strong">{m.email}</span>
-                <span className="muted small">{m.role === 'owner' ? 'Sahip' : 'Çalışan'} · {shortDate(m.joined_at)} tarihinden beri</span>
+                <span className="muted small">{shortDate(m.joined_at)} tarihinden beri</span>
               </span>
             </div>
           ))}

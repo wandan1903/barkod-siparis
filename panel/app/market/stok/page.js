@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { useOrg } from '@/lib/org-context';
 import { num, tl, errorText } from '@/lib/format';
@@ -79,7 +80,10 @@ export default function StockPage() {
 
   return (
     <>
-      <h1 style={{ fontSize: 22 }}>Stok</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+        <h1 style={{ fontSize: 22, margin: 0 }}>Stok</h1>
+        <Link href="/market/etiket" className="btn small outline">Raf etiketi yazdır</Link>
+      </div>
       {message ? <div className={`notice ${message.kind}`} role="status">{message.text}</div> : null}
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

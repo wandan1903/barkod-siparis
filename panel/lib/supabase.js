@@ -22,4 +22,10 @@ export async function signOutSafely() {
   } catch (e) {
     // yok say
   }
+  try {
+    // internetsiz açılış için saklanan market bilgisi (başka kullanıcıya kalmasın)
+    window.localStorage.removeItem('bs_market_ctx');
+  } catch (e) {
+    // yok say
+  }
 }

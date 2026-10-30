@@ -7,6 +7,8 @@ import { supabase, signOutSafely } from '@/lib/supabase';
 import { OrgContext } from '@/lib/org-context';
 import { loadMemberships } from '@/lib/memberships';
 import { useUnreadCount, UnreadBadge } from '@/components/NotificationBell';
+import OfflineBar from '@/components/OfflineBar';
+import { saveContext, loadContext } from '@/lib/offline';
 import './market.css';
 
 const ICON = {
@@ -70,18 +72,35 @@ export default function MarketLayout({ children }) {
     let cancelled = false;
 
     async function load() {
-      const { data } = await supabase.auth.getSession();
-      const session = data.session;
+      const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+      const cached = loadContext();
+      let session = null;
+      try {
+        const { data } = await supabase.auth.getSession();
+        session = data.session;
+      } catch (e) {
+        session = null;
+      }
       if (!session) {
+        // internet yokken oturum yenilenemez: bu cihazda daha önce açılmış marketle devam et
+        if (offline && cached && cached.org) {
+          setState({ loading: false, session: { user: { id: cached.userId, email: cached.email } }, org: cached.org, error: '' });
+          return;
+        }
         router.replace('/giris');
         return;
       }
       const m = await loadMemberships(session.user.id);
       if (cancelled) return;
+      if (m.error && cached && cached.org && cached.userId === session.user.id) {
+        setState({ loading: false, session, org: cached.org, error: '' });
+        return;
+      }
       if (!m.retailer && m.distributor) {
         router.replace('/');
         return;
       }
+      if (m.retailer) saveContext({ userId: session.user.id, email: session.user.email, org: m.retailer });
       setState({
         loading: false,
         session,
@@ -99,6 +118,11 @@ export default function MarketLayout({ children }) {
       sub.subscription.unsubscribe();
     };
   }, [router]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator) || process.env.NODE_ENV !== 'production') return;
+    navigator.serviceWorker.register('/sw.js').catch(() => null);
+  }, []);
 
   async function signOut() {
     await signOutSafely();
@@ -129,6 +153,7 @@ export default function MarketLayout({ children }) {
           </div>
           <BellLink orgId={state.org.id} />
         </header>
+        <OfflineBar retailerId={state.org.id} />
         <main className="m-main">{children}</main>
         <nav className="m-nav" aria-label="Ana menü">
           <div className="inner">

@@ -61,3 +61,12 @@
 .bell { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px; color: var(--ink); background: #fff; text-decoration: none; }
 .bell:focus-visible { outline: 2px solid var(--green); }
 .bell-count { position: absolute; top: -4px; right: -4px; }
+
+.offline-bar { margin: 0 auto; max-width: 520px; width: calc(100% - 32px); border-radius: 12px; padding: 10px 14px; font-size: 13px; margin-top: 8px; }
+.offline-bar.off { background: #2b2b2b; color: #fff; }
+.offline-bar.off .link { color: #fff; }
+.offline-bar.ok { background: var(--green-soft); color: var(--green-dark); }
+.offline-bar.warn { background: var(--warn-soft); color: #8a3505; }
+.offline-bar .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.offline-bar .row span { flex: 1; min-width: 180px; }
+.offline-bar ul { margin: 8px 0 0; padding-left: 18px; }

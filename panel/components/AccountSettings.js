@@ -10,7 +10,7 @@ import { errorText, authErrorText } from '@/lib/format';
 export default function AccountSettings({ withSignOut = false }) {
   const { org, user } = useOrg();
   const router = useRouter();
-  const isOwner = org.role === 'owner';
+  const canEdit = true; // rol ayrımı yok: hesaba bağlı herkes düzenleyebilir
   const [form, setForm] = useState(null);
   const [saved, setSaved] = useState(null);
   const [message, setMessage] = useState(null);
@@ -101,7 +101,6 @@ export default function AccountSettings({ withSignOut = false }) {
           <h2 style={{ margin: 0 }}>Firma bilgileri</h2>
           <p className="muted small" style={{ margin: '4px 0 0' }}>
             {org.type === 'distributor' ? 'Marketler sizi bu adla görür.' : 'Distribütörler sizi bu adla görür.'}
-            {isOwner ? '' : ' Bu bilgileri yalnızca hesap sahibi değiştirebilir.'}
           </p>
         </div>
         {message ? <div className={`notice ${message.kind}`} role="status">{message.text}</div> : null}
@@ -111,27 +110,25 @@ export default function AccountSettings({ withSignOut = false }) {
           <form onSubmit={saveProfile} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div className="field">
               <label htmlFor="acc-name">Firma adı</label>
-              <input id="acc-name" className="input" value={form.name} onChange={(e) => set({ name: e.target.value })} disabled={!isOwner} required maxLength={120} />
+              <input id="acc-name" className="input" value={form.name} onChange={(e) => set({ name: e.target.value })} disabled={!canEdit} required maxLength={120} />
             </div>
             <div className="field">
               <label htmlFor="acc-tax">Vergi no / TC kimlik no (isteğe bağlı)</label>
-              <input id="acc-tax" className="input" inputMode="numeric" value={form.tax_no} onChange={(e) => set({ tax_no: e.target.value.replace(/\D/g, '').slice(0, 11) })} disabled={!isOwner} />
+              <input id="acc-tax" className="input" inputMode="numeric" value={form.tax_no} onChange={(e) => set({ tax_no: e.target.value.replace(/\D/g, '').slice(0, 11) })} disabled={!canEdit} />
             </div>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               <div className="field" style={{ flex: 1, minWidth: 160 }}>
                 <label htmlFor="acc-city">İl</label>
-                <input id="acc-city" className="input" value={form.city} onChange={(e) => set({ city: e.target.value })} disabled={!isOwner} maxLength={80} />
+                <input id="acc-city" className="input" value={form.city} onChange={(e) => set({ city: e.target.value })} disabled={!canEdit} maxLength={80} />
               </div>
               <div className="field" style={{ flex: 1, minWidth: 160 }}>
                 <label htmlFor="acc-district">İlçe</label>
-                <input id="acc-district" className="input" value={form.district} onChange={(e) => set({ district: e.target.value })} disabled={!isOwner} maxLength={80} />
+                <input id="acc-district" className="input" value={form.district} onChange={(e) => set({ district: e.target.value })} disabled={!canEdit} maxLength={80} />
               </div>
             </div>
-            {isOwner ? (
-              <button className="btn primary" type="submit" disabled={busy || !dirty} style={{ alignSelf: 'flex-start' }}>
-                {busy ? 'Kaydediliyor…' : 'Kaydet'}
-              </button>
-            ) : null}
+            <button className="btn primary" type="submit" disabled={busy || !dirty} style={{ alignSelf: 'flex-start' }}>
+              {busy ? 'Kaydediliyor…' : 'Kaydet'}
+            </button>
           </form>
         )}
       </section>
@@ -140,7 +137,7 @@ export default function AccountSettings({ withSignOut = false }) {
         <div>
           <h2 style={{ margin: 0 }}>Hesabım</h2>
           <p className="muted small" style={{ margin: '4px 0 0' }}>
-            {user.email} · {isOwner ? 'Hesap sahibi' : 'Çalışan'}
+            {user.email}
           </p>
         </div>
         {pwMessage ? <div className={`notice ${pwMessage.kind}`} role="status">{pwMessage.text}</div> : null}

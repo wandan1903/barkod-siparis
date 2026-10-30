@@ -323,3 +323,16 @@ td.strong, .strong { font-weight: 600; }
 .delta.up { color: var(--green); }
 .delta.down { color: var(--warn); }
 .report-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+
+/* Etiket yazdırma: yalnızca #print-root kâğıda basılır */
+#print-root { display: none; }
+@media print {
+  body > *:not(#print-root) { display: none !important; }
+  #print-root { display: block; }
+  html, body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
+  #print-root, #print-root * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+.pick-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line-soft); }
+.pick-row:last-child { border-bottom: none; }
+.pick-row .grow { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pick-row input[type="number"] { width: 64px; }

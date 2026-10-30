@@ -3,6 +3,13 @@ import './globals.css';
 export const metadata = {
   title: 'Barkod Sipariş – Distribütör Paneli',
   description: 'Bağlı marketlerdeki stok durumu, sipariş önerileri ve teklifler.',
+  manifest: '/manifest.webmanifest',
+  icons: { icon: '/icon-192.png', apple: '/icon-192.png' },
+  appleWebApp: { capable: true, title: 'Barkod Sipariş', statusBarStyle: 'default' },
+};
+
+export const viewport = {
+  themeColor: '#0b6e4f',
 };
 
 export default function RootLayout({ children }) {
