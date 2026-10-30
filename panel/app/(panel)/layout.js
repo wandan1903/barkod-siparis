@@ -13,6 +13,7 @@ const NAV = [
   { href: '/siparisler', label: 'Siparişler' },
   { href: '/marketler', label: 'Marketler' },
   { href: '/cari', label: 'Cari hesaplar' },
+  { href: '/raporlar', label: 'Raporlar' },
   { href: '/urunler', label: 'Ürünler ve fiyatlar' },
   { href: '/depo', label: 'Depo' },
   { href: '/kampanyalar', label: 'Kampanyalar' },

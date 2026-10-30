@@ -64,6 +64,16 @@ export default function MarketHome() {
         </section>
       ) : null}
 
+      <section className="list">
+        <div className="list-row">
+          <div className="grow-1">
+            <span className="strong">Satış raporu</span>
+            <span className="muted small">Ciro, kâr, en çok satanlar</span>
+          </div>
+          <Link href="/market/rapor" className="btn small">Aç</Link>
+        </div>
+      </section>
+
       {data.debt > 0 ? (
         <section className="list">
           <div className="list-row">
